@@ -6,5 +6,8 @@ joblib
 nltk
 sastrawi
 plotly
-scikit-learn
+scikit-learn==1.6.1
 wordcloud
+streamlit-option-menu
+imbalanced-learn
+xgboost
