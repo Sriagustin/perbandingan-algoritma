@@ -550,6 +550,8 @@ elif selected_tab == "Perbandingan Algoritma":
             # Simpan hasil akurasi untuk rekomendasi
             model_results[model_name] = round(overall_acc, 2)
 
+        import plotly.express as px
+
     st.subheader("Perbandingan Metrik Antar Model")
 
     if metrics_summary["Model"]:
