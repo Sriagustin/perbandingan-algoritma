@@ -90,7 +90,7 @@ def load_models():
 # ========== PAGE CONFIG ==========
 
 st.set_page_config(
-    page_title="Dashboard Perbandingan Kinerja Algoritma",
+    page_title="Dashboard Perbandingan Analisis Sentimen",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -205,7 +205,7 @@ st.markdown("""
     <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
         <img src="https://upload.wikimedia.org/wikipedia/commons/c/ce/X_logo_2023.svg" width="100"/>
         <h1 style="margin: 0; color: black; font-size: 60px;">
-           Dashboard Perbandingan Kinerja Algoritma
+           Dashboard Perbandingan Analisis Sentimen
         </h1>
     </div>
 """, unsafe_allow_html=True)
@@ -292,7 +292,7 @@ if selected_tab == "Analisis Sentimen":
     with col1:
         st.markdown(f"""
         <div class='box'>
-            Jumlah Data Mentah
+            Data Mentah
             <span>{jumlah_sebelum}</span>
         </div>
         """, unsafe_allow_html=True)
@@ -300,7 +300,7 @@ if selected_tab == "Analisis Sentimen":
     with col2:
         st.markdown(f"""
         <div class='box'>
-            Jumlah Data Preprocessing
+            Data Preprocessing
             <span>{jumlah_sesudah}</span>
         </div>
         """, unsafe_allow_html=True)
@@ -550,44 +550,41 @@ elif selected_tab == "Perbandingan Algoritma":
             # Simpan hasil akurasi untuk rekomendasi
             model_results[model_name] = round(overall_acc, 2)
 
-    st.markdown("---")
-    st.subheader("Bagan Batang Bertumpuk yang Dikelompokkan")
+    st.subheader("Perbandingan Metrik Antar Model")
 
     if metrics_summary["Model"]:
-        metrics_df = pd.DataFrame(metrics_summary).set_index("Model")
+        # Siapkan data dalam format long
+        df = pd.DataFrame(metrics_summary)
+        df_long = df.melt(id_vars="Model", var_name="Metrik", value_name="Nilai")
 
-        fig = go.Figure()
+        # Buat bar chart vertikal: grup per metrik, isi oleh model
+        fig = px.bar(
+            df_long,
+            x="Metrik",             # Grup per metrik
+            y="Nilai",              # Nilai metrik ke atas
+            color="Model",          # Warna berdasarkan model
+            barmode="group",        # Berkelompok, bukan tumpuk
+            text="Nilai",
+            height=600,
+            color_discrete_sequence=px.colors.qualitative.Pastel
+        )
 
-        for metric in metrics_df.columns:
-            fig.add_trace(
-                go.Bar(
-                    name=metric,
-                    x=metrics_df.index,
-                    y=metrics_df[metric],
-                    text=metrics_df[metric].round(2),
-                    textposition='auto',
-                    opacity=0.8
-                )
-            )
+        fig.update_traces(
+            texttemplate='%{text:.2f}',
+            textposition='outside',
+            opacity=0.9
+        )
 
         fig.update_layout(
-            barmode='group',
             plot_bgcolor='rgba(0,0,0,0)',
             paper_bgcolor='rgba(0,0,0,0)',
-            font=dict(color='white', size=16),
-            xaxis=dict(
-                title='Model',
-                color='white',
-                tickangle=-45
-            ),
-            yaxis=dict(
-                title='Metric Values',
-                color='white'
-            ),
+            font=dict(color='white', size=14),
+            xaxis=dict(title='Metrik', color='white'),
+            yaxis=dict(title='Nilai Metrik', color='white', range=[0, 1.1]),
             legend=dict(
+                title='Model',
                 bgcolor='rgba(0,0,0,0)',
-                bordercolor='rgba(0,0,0,0)',
-                font=dict(color='white', size=14)
+                font=dict(color='white')
             )
         )
 
@@ -618,23 +615,31 @@ elif selected_tab == "Prediksi Sentimen":
     
     st.subheader("Prediksi Sentimen")
 
-    if not xgb_model:
-        st.error("XGBoost model not loaded.")
+    if not all([nb_model, svm_model, xgb_model]):
+        st.error("Beberapa model belum dimuat. Pastikan semua model tersedia.")
     else:
         new_text = st.text_input("Masukkan teks untuk prediksi sentimen:")
 
         if st.button("Prediksi Sentimen"):
             if not new_text.strip():
-                st.warning("Silakan masukkan beberapa teks untuk memprediksi.")
+                st.warning("Silakan masukkan beberapa teks.")
             else:
                 preprocessed = preprocess_text(new_text)
                 try:
-                    prediction = xgb_model.predict([preprocessed])
+                    predictions = {
+                        "Naive Bayes": nb_model.predict([preprocessed])[0],
+                        "SVM": svm_model.predict([preprocessed])[0],
+                        "XGBoost": xgb_model.predict([preprocessed])[0]
+                    }
+
+                    # Decode jika pakai LabelEncoder
                     if le:
-                        predicted_sentiment = le.inverse_transform(prediction)
-                    else:
-                        predicted_sentiment = prediction
-                    st.success(f"**Prediksi Sentimen:** {predicted_sentiment[0].capitalize()}")
+                        predictions = {k: le.inverse_transform([v])[0] for k, v in predictions.items()}
+
+                    st.markdown("### 🔍 Hasil Prediksi:")
+                    for model_name, pred in predictions.items():
+                        st.success(f"**{model_name}** → {pred.capitalize()}")
+
                 except Exception as e:
                     st.error(f"Prediction error: {e}")
 
@@ -643,18 +648,29 @@ elif selected_tab == "Prediksi Sentimen":
 
         if uploaded_file is not None:
             lines = uploaded_file.read().decode('utf-8').split('\n')
-            preprocessed_lines = [preprocess_text(line) for line in lines if line.strip()]
+            clean_lines = [line for line in lines if line.strip()]
+            preprocessed_lines = [preprocess_text(line) for line in clean_lines]
+
             try:
-                predictions = xgb_model.predict(preprocessed_lines)
+                predictions_nb = nb_model.predict(preprocessed_lines)
+                predictions_svm = svm_model.predict(preprocessed_lines)
+                predictions_xgb = xgb_model.predict(preprocessed_lines)
+
                 if le:
-                    decoded_preds = le.inverse_transform(predictions)
-                else:
-                    decoded_preds = predictions
+                    predictions_nb = le.inverse_transform(predictions_nb)
+                    predictions_svm = le.inverse_transform(predictions_svm)
+                    predictions_xgb = le.inverse_transform(predictions_xgb)
+
                 results_df = pd.DataFrame({
-                    "Text": lines,
-                    "Predicted Sentiment": [p.capitalize() for p in decoded_preds]
+                    "Teks": clean_lines,
+                    "Naive Bayes": [p.capitalize() for p in predictions_nb],
+                    "SVM": [p.capitalize() for p in predictions_svm],
+                    "XGBoost": [p.capitalize() for p in predictions_xgb]
                 })
+
+                st.markdown("### 🧾 Hasil Prediksi Teks dari File:")
                 st.dataframe(results_df)
+
             except Exception as e:
                 st.error(f"Prediction error: {e}")
 
