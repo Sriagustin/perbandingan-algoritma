@@ -205,7 +205,7 @@ st.markdown("""
     <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
         <img src="https://upload.wikimedia.org/wikipedia/commons/c/ce/X_logo_2023.svg" width="100"/>
         <h1 style="margin: 0; color: black; font-size: 60px;">
-           Dashboard Perbandingan Analisis Sentimen
+           Dashboard Perbandingan Kinerja Algoritma
         </h1>
     </div>
 """, unsafe_allow_html=True)
@@ -705,4 +705,5 @@ st.markdown(f"""
         Copyright © {current_year} | Apps Created by <b><a href="https://www.linkedin.com/in/sriagustin/" target="_blank">Sri Agustin</a></b>
     </div>
 """, unsafe_allow_html=True)
+
 
