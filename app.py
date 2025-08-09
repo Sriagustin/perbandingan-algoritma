@@ -90,7 +90,7 @@ def load_models():
 # ========== PAGE CONFIG ==========
 
 st.set_page_config(
-    page_title="Dashboard Perbandingan Analisis Sentimen",
+    page_title="Dashboard Perbandingan Kinerja Algoritma",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -705,3 +705,4 @@ st.markdown(f"""
         Copyright © {current_year} | Apps Created by <b><a href="https://www.linkedin.com/in/sriagustin/" target="_blank">Sri Agustin</a></b>
     </div>
 """, unsafe_allow_html=True)
+
